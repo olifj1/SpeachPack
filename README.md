@@ -1,40 +1,35 @@
-# GameHub TTS Test v0.3
+# GameHub TTS Test v0.4 — Sherpa Test 3
 
-This build is primarily an update/caching fix for iPhone/iPad PWAs.
+This version takes a deliberately different approach.
 
-## What changed
+Instead of immediately trying to integrate another JavaScript wrapper, it opens a working
+Sherpa-ONNX WebAssembly Piper demo directly. That gives us a clean compatibility/performance
+test on the actual iPhone/iPad.
 
-- The page now visibly says `GameHub experiment · v0.3` at the top.
-- Piper remains the default engine.
-- The short `Hello, how are you?` test remains the default.
-- Local CSS/JS/manifest/icon URLs are versioned with `?v=0.3`.
-- The service worker is now **network-first for page navigation/HTML**.
-- Old GameHub TTS Test caches are removed when the new worker activates.
-- `skipWaiting()` and `clients.claim()` are used.
-- The app explicitly asks the browser to check for a service-worker update.
-- If a new worker takes control while the page is open, the page reloads once automatically.
+## First test settings
 
-This should make future GitHub Pages updates much less likely to appear stuck on an old installed-PWA version.
+- Precision: **int8 (~20 MB)**
+- Text: **Hello, how are you?**
+- Speed: **1.0**
+- Press **Generate**
 
-## First check
+## Why this test is useful
 
-After uploading v0.3, open the normal Safari URL once.
+Kokoro and the previous Piper wrapper both failed during generation on iOS Safari.
 
-You should immediately see:
+Sherpa-ONNX officially supports TTS through WebAssembly. The linked browser demo uses Sherpa
+directly and provides an int8 Piper model of roughly 20 MB, which is a substantially lighter
+test than the earlier ~92 MB Kokoro configuration.
 
-`GAMEHUB EXPERIMENT · V0.3`
+If this direct Sherpa demo also fails or takes an impractical amount of time, that is a strong
+signal that we should stop pursuing local browser neural TTS for GameHub for now.
 
-and the controls should include:
-
-- Engine
-- `Piper — lighter WASM test`
-- Voice
-- Speed
-- Generation timeout
-- `Run TTS test`
-
-If Safari still shows the old page, refresh once. If an already-installed Home Screen copy still shows the old version, fully close it and reopen it after visiting the Safari page once.
+If it works promptly, the next step is to package the same Sherpa runtime/model into the test
+repository and then into GameHub.
 
 ## GitHub Pages
 
-Upload all files directly into the repository root, replacing the previous files.
+Upload all files in this ZIP directly into the repository root, replacing v0.3.
+
+The page visibly shows **GameHub experiment · v0.4** so it is easy to confirm the latest build
+has actually loaded.

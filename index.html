@@ -6,102 +6,71 @@
   <meta name="theme-color" content="#e7dbd2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="TTS Test">
+  <meta name="apple-mobile-web-app-title" content="TTS Test 3">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <title>GameHub TTS Test</title>
+  <title>GameHub TTS Test 3</title>
 
-  <link rel="manifest" href="./manifest.json?v=0.3">
-  <link rel="apple-touch-icon" href="./icon-192.png?v=0.3">
-  <link rel="icon" href="./icon-192.png?v=0.3">
-  <link rel="stylesheet" href="./style.css?v=0.3">
+  <link rel="manifest" href="./manifest.json?v=0.4">
+  <link rel="apple-touch-icon" href="./icon-192.png?v=0.4">
+  <link rel="icon" href="./icon-192.png?v=0.4">
+  <link rel="stylesheet" href="./style.css?v=0.4">
 </head>
 
 <body>
   <main class="app-shell">
     <header class="page-header">
       <div>
-        <div class="eyebrow">GameHub experiment · v0.3</div>
-        <h1>TTS Test</h1>
+        <div class="eyebrow">GameHub experiment · v0.4</div>
+        <h1>Sherpa TTS</h1>
       </div>
       <div id="installState" class="status-pill">Web page</div>
     </header>
 
     <section class="panel main-panel">
-      <label class="field-label" for="textInput">Sentence</label>
-      <textarea id="textInput" rows="5">Hello, how are you?</textarea>
+      <div class="test-number">TEST 3</div>
+      <h2 class="sherpa-heading">Sherpa-ONNX WebAssembly</h2>
+      <p class="intro-copy">
+        This test deliberately uses an existing Sherpa-ONNX browser demo rather than another wrapper.
+        That lets us answer the important question: can Sherpa actually generate speech quickly on this iPhone/iPad?
+      </p>
 
-      <div class="controls-grid">
-        <label class="control">
-          <span>Engine</span>
-          <select id="engineSelect">
-            <option value="piper" selected>Piper — lighter WASM test</option>
-            <option value="kokoro">Kokoro — previous engine</option>
-          </select>
-        </label>
-
-        <label class="control">
-          <span>Voice</span>
-          <select id="voiceSelect"></select>
-        </label>
-
-        <label class="control">
-          <span>Speed <strong id="speedReadout">1.00×</strong></span>
-          <input id="speedInput" type="range" min="0.75" max="1.20" value="1" step="0.05">
-        </label>
-
-        <label class="control">
-          <span>Generation timeout</span>
-          <select id="timeoutSelect">
-            <option value="15">15 seconds</option>
-            <option value="30" selected>30 seconds</option>
-            <option value="60">60 seconds</option>
-          </select>
-        </label>
+      <div class="test-instructions">
+        <strong>Use these settings first:</strong>
+        <span>Precision: int8 (~20 MB)</span>
+        <span>Text: “Hello, how are you?”</span>
+        <span>Speed: 1.0</span>
       </div>
 
-      <button id="generateButton" class="primary-button" type="button">
-        <span id="buttonLabel">Run TTS test</span>
+      <button id="openTestButton" class="primary-button" type="button">
+        Open Sherpa test
       </button>
 
-      <div id="statusBox" class="status-box" aria-live="polite">
-        <div class="status-row">
-          <span>Status</span>
-          <strong id="statusText">Ready</strong>
-        </div>
-        <div class="meter" aria-hidden="true"><div id="meterFill"></div></div>
-        <p id="statusDetail">Test 2 starts with Piper and a very short phrase. If generation stalls, the test stops automatically and reports it.</p>
-      </div>
+      <p class="small-note centred-note">
+        The test opens the Sherpa browser demo directly. If it generates speech promptly on the same device,
+        we know Sherpa/WASM is worth integrating properly into GameHub.
+      </p>
     </section>
 
     <section class="panel measurements">
-      <h2>Timing</h2>
-      <div class="metrics">
-        <div class="metric">
-          <span>Model load</span>
-          <strong id="loadTime">—</strong>
-        </div>
-        <div class="metric">
-          <span>Generation</span>
-          <strong id="generationTime">—</strong>
-        </div>
-        <div class="metric">
-          <span>Total</span>
-          <strong id="totalTime">—</strong>
-        </div>
+      <h2>What to watch</h2>
+      <div class="check-grid">
+        <div><strong>1</strong><span>Does the int8 model load?</span></div>
+        <div><strong>2</strong><span>Does Generate finish?</span></div>
+        <div><strong>3</strong><span>How many seconds does it take?</span></div>
+        <div><strong>4</strong><span>Is the voice good enough?</span></div>
       </div>
-      <p class="small-note">For the useful comparison, try the same sentence first in Safari, then from the Home Screen icon, then with Wi‑Fi disabled after one successful load.</p>
     </section>
 
     <section class="panel technical">
       <button id="detailsToggle" class="text-button" type="button" aria-expanded="false">Show technical details</button>
       <div id="details" hidden>
         <dl>
-          <div><dt>Test version</dt><dd>v0.2</dd></div>
-          <div><dt>Piper</dt><dd>@mintplex-labs/piper-tts-web 1.0.3</dd></div>
-          <div><dt>Kokoro</dt><dd>Kokoro.js 1.2.1</dd></div>
-          <div><dt>Inference</dt><dd>On-device WebAssembly</dd></div>
-          <div><dt>Purpose</dt><dd>Compare a lighter Piper model against Kokoro on iOS/iPadOS Safari.</dd></div>
+          <div><dt>Engine</dt><dd>sherpa-onnx</dd></div>
+          <div><dt>Runtime</dt><dd>WebAssembly</dd></div>
+          <div><dt>Model</dt><dd>Piper English LibriTTS-R medium</dd></div>
+          <div><dt>Test precision</dt><dd>int8 (~20 MB)</dd></div>
+          <div><dt>Execution</dt><dd>Local browser inference</dd></div>
         </dl>
       </div>
     </section>
@@ -115,6 +84,6 @@
     </div>
   </div>
 
-  <script type="module" src="./app.js?v=0.3"></script>
+  <script src="./app.js?v=0.4"></script>
 </body>
 </html>

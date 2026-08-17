@@ -351,3 +351,92 @@ dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* v0.4 Sherpa compatibility test */
+.test-number {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(202,118,93,.12);
+  color: var(--accent-dark);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.sherpa-heading {
+  margin-bottom: 10px;
+  font-size: clamp(25px, 5vw, 34px);
+}
+
+.intro-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.test-instructions {
+  display: grid;
+  gap: 7px;
+  margin: 18px 0 2px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: rgba(255,255,255,.30);
+  font-size: 14px;
+}
+
+.test-instructions strong {
+  margin-bottom: 2px;
+}
+
+.test-instructions span {
+  color: var(--muted);
+}
+
+.centred-note {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.check-grid > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,.32);
+}
+
+.check-grid strong {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(202,118,93,.12);
+  color: var(--accent-dark);
+}
+
+.check-grid span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+@media (max-width: 540px) {
+  .check-grid {
+    grid-template-columns: 1fr;
+  }
+}

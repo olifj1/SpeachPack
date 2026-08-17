@@ -1,8 +1,8 @@
 {
-  "name": "GameHub TTS Test 0.3",
-  "short_name": "TTS Test",
+  "name": "GameHub TTS Test 3",
+  "short_name": "TTS Test 3",
   "description": "A standalone GameHub-style test of local Kokoro neural text-to-speech.",
-  "start_url": "./index.html",
+  "start_url": "./index.html?v=0.4",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
