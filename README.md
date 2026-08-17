@@ -1,42 +1,33 @@
-# GameHub TTS Test v0.6 — direct Sherpa
+# GameHub TTS Test v0.7 — fixed direct Sherpa path
 
-This version removes the js-tts-wrapper experiment completely.
+This is the corrected version of v0.6.
 
-It follows the same direct Sherpa-ONNX WebAssembly structure as the browser demo that
-successfully generated speech on the iPhone:
+## Fix
 
-1. Define the Emscripten `Module`.
-2. Point `Module.locateFile()` at the packed Sherpa/Piper model.
-3. Load `sherpa-onnx-wasm-main-tts.js`.
-4. Load `sherpa-onnx-tts.js`.
-5. Create one reusable `OfflineTts` engine.
-6. Call `_tts.generate()` directly for each sentence.
+The fp32 Sherpa demo directory does **not** include an `-fp32` suffix.
 
-There is no npm package or TTS wrapper between GameHub and Sherpa.
+v0.6 incorrectly requested:
 
-## Behaviour
+`wasm-piper-en-libritts_r-medium-fp32/`
 
-The GameHub page paints first. About 200 ms later the Sherpa/model load begins automatically
-in the background. The six sentence choices remain usable during loading.
+v0.7 correctly requests:
 
-When the top-right indicator says **Voice ready**, press **Speak sentence**.
+`wasm-piper-en-libritts_r-medium/`
 
-The timing panel reports:
+Quantised variants would still use suffixes such as `-int8`.
 
-- total first-load/setup time
-- generation time
-- generated audio duration
+Everything else remains deliberately unchanged so this is a clean test of the path correction.
 
-The important comparison is generation time versus audio duration.
+## Test
 
-## Model
+Upload all files over v0.6.
 
-This test deliberately stays with Piper LibriTTS-R medium and fp32, matching the configuration
-family that already worked in the direct Sherpa browser test. Optimising model size and trying
-British voices comes after direct integration is proven.
+The page should visibly say:
 
-## Upload
+`GameHub experiment · v0.7`
 
-Replace the previous repository files with everything in this ZIP.
+Then wait to see whether the top-right indicator reaches:
 
-The page visibly says **GameHub experiment · v0.6**.
+`Voice ready`
+
+If it does, try the first short sentence and then cycle through the longer sentences.

@@ -1,4 +1,4 @@
-// GameHub TTS Test v0.6
+// GameHub TTS Test v0.7
 // Direct Sherpa-ONNX WASM integration.
 // No npm package and no third-party JS TTS wrapper.
 //
@@ -15,7 +15,8 @@ var CDN_BASE =
   "https://huggingface.co/datasets/jiangzhuo9357/sherpa-onnx-tts-models/resolve/main/";
 
 // The public demo stores each packed Piper build by model + precision.
-var wasmDir = CDN_BASE + "wasm-" + MODEL_KEY + "-" + PRECISION + "/";
+var precisionSuffix = PRECISION === "fp32" ? "" : "-" + PRECISION;
+var wasmDir = CDN_BASE + "wasm-" + MODEL_KEY + precisionSuffix + "/";
 
 var sentences = [
   "Hello, how are you?",
@@ -173,7 +174,7 @@ var Module = {
   },
 
   onAbort: function(reason) {
-    failLoad("Sherpa stopped: " + reason);
+    failLoad("Sherpa stopped: " + reason + " | Model path: " + wasmDir);
   }
 };
 
@@ -249,7 +250,7 @@ function loadScript(url) {
     script.async = false;
     script.onload = resolve;
     script.onerror = function() {
-      reject(new Error("Could not load " + url));
+      reject(new Error("Could not load Sherpa asset: " + url));
     };
     document.body.appendChild(script);
   });
@@ -347,7 +348,7 @@ requestAnimationFrame(function() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async function() {
     try {
-      var reg = await navigator.serviceWorker.register("./sw.js?v=0.6", {
+      var reg = await navigator.serviceWorker.register("./sw.js?v=0.7", {
         updateViaCache: "none"
       });
       await reg.update();
