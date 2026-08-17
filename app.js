@@ -1,12 +1,23 @@
-import { SherpaOnnxWasmTTSClient } from "https://cdn.jsdelivr.net/npm/js-tts-wrapper@0.1.81/js-tts-wrapper.browser.js";
+// GameHub TTS Test v0.6
+// Direct Sherpa-ONNX WASM integration.
+// No npm package and no third-party JS TTS wrapper.
+//
+// This mirrors the successful Sherpa demo architecture:
+//   Module.locateFile -> packed model directory
+//   sherpa-onnx-wasm-main-tts.js
+//   sherpa-onnx-tts.js
+//   createOfflineTts(...)
+//   tts.generate(...)
 
-const WASM_PATH =
-  "https://cdn.jsdelivr.net/gh/willwade/js-tts-wrapper-assets@main/sherpaonnx/tts/vocoder-models/sherpa-onnx-tts.js";
-const MODELS_URL =
-  "https://cdn.jsdelivr.net/gh/willwade/js-tts-wrapper-assets@main/sherpaonnx/models/merged_models.json";
-const VOICE_ID = "piper-en-jenny_dioco-medium";
+var MODEL_KEY = "piper-en-libritts_r-medium";
+var PRECISION = "fp32";
+var CDN_BASE =
+  "https://huggingface.co/datasets/jiangzhuo9357/sherpa-onnx-tts-models/resolve/main/";
 
-const sentences = [
+// The public demo stores each packed Piper build by model + precision.
+var wasmDir = CDN_BASE + "wasm-" + MODEL_KEY + "-" + PRECISION + "/";
+
+var sentences = [
   "Hello, how are you?",
   "The little fox looked up at the moon and wondered what adventures tomorrow might bring.",
   "There are twelve apples in the basket. If we use four, how many apples are left?",
@@ -15,29 +26,29 @@ const sentences = [
   "At half past seven in the morning, Sam packed a blue coat, two sandwiches, and a bottle of water for the journey."
 ];
 
-const installState = document.querySelector("#installState");
-const engineState = document.querySelector("#engineState");
-const sentenceNumber = document.querySelector("#sentenceNumber");
-const sentenceText = document.querySelector("#sentenceText");
-const previousSentence = document.querySelector("#previousSentence");
-const nextSentence = document.querySelector("#nextSentence");
-const speakButton = document.querySelector("#speakButton");
-const speedInput = document.querySelector("#speedInput");
-const speedReadout = document.querySelector("#speedReadout");
-const statusText = document.querySelector("#statusText");
-const statusDetail = document.querySelector("#statusDetail");
-const meterFill = document.querySelector("#meterFill");
-const loadTime = document.querySelector("#loadTime");
-const generationTime = document.querySelector("#generationTime");
-const audioLength = document.querySelector("#audioLength");
-const detailsToggle = document.querySelector("#detailsToggle");
-const details = document.querySelector("#details");
+var installState = document.querySelector("#installState");
+var engineState = document.querySelector("#engineState");
+var sentenceNumber = document.querySelector("#sentenceNumber");
+var sentenceText = document.querySelector("#sentenceText");
+var previousSentence = document.querySelector("#previousSentence");
+var nextSentence = document.querySelector("#nextSentence");
+var speakButton = document.querySelector("#speakButton");
+var speedInput = document.querySelector("#speedInput");
+var speedReadout = document.querySelector("#speedReadout");
+var statusText = document.querySelector("#statusText");
+var statusDetail = document.querySelector("#statusDetail");
+var meterFill = document.querySelector("#meterFill");
+var loadTime = document.querySelector("#loadTime");
+var generationTime = document.querySelector("#generationTime");
+var audioLength = document.querySelector("#audioLength");
+var detailsToggle = document.querySelector("#detailsToggle");
+var details = document.querySelector("#details");
 
-let sentenceIndex = 0;
-let tts = null;
-let ready = false;
-let currentAudio = null;
-let currentUrl = null;
+var sentenceIndex = 0;
+var loadStarted = 0;
+var currentSource = null;
+var audioContext = null;
+var initAttempted = false;
 
 function isStandalone() {
   return window.matchMedia("(display-mode: standalone)").matches ||
@@ -50,7 +61,7 @@ function setStatus(title, detail, progress) {
   statusText.textContent = title;
   statusDetail.textContent = detail;
   if (typeof progress === "number") {
-    meterFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+    meterFill.style.width = Math.max(0, Math.min(100, progress)) + "%";
   }
 }
 
@@ -62,7 +73,7 @@ function setEngineState(text, stateClass) {
 
 function renderSentence() {
   sentenceText.textContent = sentences[sentenceIndex];
-  sentenceNumber.textContent = `${sentenceIndex + 1} / ${sentences.length}`;
+  sentenceNumber.textContent = (sentenceIndex + 1) + " / " + sentences.length;
 }
 
 function moveSentence(delta) {
@@ -70,126 +81,209 @@ function moveSentence(delta) {
   renderSentence();
 }
 
-previousSentence.addEventListener("click", () => moveSentence(-1));
-nextSentence.addEventListener("click", () => moveSentence(1));
+previousSentence.addEventListener("click", function() { moveSentence(-1); });
+nextSentence.addEventListener("click", function() { moveSentence(1); });
 
-speedInput.addEventListener("input", () => {
-  speedReadout.textContent = `${Number(speedInput.value).toFixed(2)}×`;
+speedInput.addEventListener("input", function() {
+  speedReadout.textContent = Number(speedInput.value).toFixed(2) + "×";
 });
 
-detailsToggle.addEventListener("click", () => {
-  const show = details.hidden;
+detailsToggle.addEventListener("click", function() {
+  var show = details.hidden;
   details.hidden = !show;
   detailsToggle.textContent = show ? "Hide technical details" : "Show technical details";
   detailsToggle.setAttribute("aria-expanded", String(show));
 });
 
 function stopAudio() {
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
-  if (currentUrl) {
-    URL.revokeObjectURL(currentUrl);
-    currentUrl = null;
+  if (currentSource) {
+    try { currentSource.stop(); } catch (_) {}
+    currentSource = null;
   }
 }
 
-async function getWavDuration(blob) {
-  try {
-    const buffer = await blob.arrayBuffer();
-    const view = new DataView(buffer);
-    if (view.byteLength < 44) return null;
+function playAudio(result) {
+  stopAudio();
 
-    let sampleRate = 0;
-    let byteRate = 0;
-    let dataSize = 0;
-    let offset = 12;
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+      sampleRate: result.sampleRate
+    });
+  }
 
-    while (offset + 8 <= view.byteLength) {
-      const id = String.fromCharCode(
-        view.getUint8(offset),
-        view.getUint8(offset + 1),
-        view.getUint8(offset + 2),
-        view.getUint8(offset + 3)
-      );
-      const size = view.getUint32(offset + 4, true);
+  if (audioContext.state === "suspended") {
+    audioContext.resume();
+  }
 
-      if (id === "fmt " && size >= 16) {
-        sampleRate = view.getUint32(offset + 12, true);
-        byteRate = view.getUint32(offset + 16, true);
-      }
-      if (id === "data") {
-        dataSize = size;
-        break;
-      }
+  var buffer = audioContext.createBuffer(
+    1,
+    result.samples.length,
+    result.sampleRate
+  );
+  buffer.getChannelData(0).set(result.samples);
 
-      offset += 8 + size + (size % 2);
+  currentSource = audioContext.createBufferSource();
+  currentSource.buffer = buffer;
+  currentSource.connect(audioContext.destination);
+  currentSource.start();
+
+  currentSource.onended = function() {
+    currentSource = null;
+    setStatus("Ready", "Choose another sentence or play this one again.", 100);
+  };
+}
+
+function failLoad(message) {
+  console.error(message);
+  setEngineState("Load failed", "error");
+  setStatus("Voice failed to load", message, 0);
+  speakButton.disabled = true;
+  speakButton.textContent = "Voice failed to load";
+}
+
+// Emscripten reads this global object when its generated script starts.
+var Module = {
+  locateFile: function(path) {
+    return wasmDir + path;
+  },
+
+  setStatus: function(text) {
+    console.log("Sherpa:", text);
+
+    if (!text) {
+      initTts();
+      return;
     }
 
-    if (byteRate && dataSize) return dataSize / byteRate;
-    if (sampleRate) return null;
-    return null;
-  } catch {
-    return null;
-  }
-}
+    var match = text.match(/Downloading data\.\.\. \((\d+)\/(\d+)\)/);
+    if (match) {
+      var loaded = parseInt(match[1], 10);
+      var total = parseInt(match[2], 10);
+      var pct = total ? Math.round((loaded / total) * 100) : 0;
+      setEngineState("Loading voice " + pct + "%", "loading");
+      setStatus(
+        "Loading voice in background…",
+        "You can choose a sentence while the model downloads.",
+        15 + pct * 0.7
+      );
+    } else {
+      setEngineState("Preparing voice…", "loading");
+      setStatus("Preparing Sherpa…", text, 12);
+    }
+  },
 
-async function prepareVoice() {
-  const started = performance.now();
+  onAbort: function(reason) {
+    failLoad("Sherpa stopped: " + reason);
+  }
+};
+
+window.Module = Module;
+
+function initTts() {
+  if (initAttempted) return;
+  initAttempted = true;
 
   try {
-    setEngineState("Loading engine…", "loading");
+    setEngineState("Starting voice…", "loading");
     setStatus(
-      "Loading Sherpa engine…",
-      "This starts automatically. You can choose a sentence while it works.",
-      18
+      "Starting voice…",
+      "The model has downloaded. Sherpa is creating the reusable TTS engine.",
+      90
     );
 
-    tts = new SherpaOnnxWasmTTSClient({
-      wasmPath: WASM_PATH,
-      mergedModelsUrl: MODELS_URL
+    var t0 = performance.now();
+
+    window._tts = createOfflineTts(Module, {
+      offlineTtsModelConfig: {
+        offlineTtsVitsModelConfig: {
+          model: "./model.onnx",
+          lexicon: "",
+          tokens: "./tokens.txt",
+          dataDir: "./espeak-ng-data",
+          dictDir: "",
+          noiseScale: 0.667,
+          noiseScaleW: 0.8,
+          lengthScale: 1.0
+        },
+        numThreads: 1,
+        debug: 0,
+        provider: "cpu"
+      },
+      ruleFsts: "",
+      ruleFars: "",
+      maxNumSentences: 1
     });
 
-    await tts.initializeWasm(WASM_PATH);
+    var initMs = performance.now() - t0;
+    var totalMs = performance.now() - loadStarted;
 
-    setEngineState("Loading voice…", "loading");
-    setStatus(
-      "Loading British voice…",
-      "The voice model is being downloaded/prepared in the background. First load is the slow one.",
-      56
+    loadTime.textContent = (totalMs / 1000).toFixed(2) + " s";
+
+    console.log(
+      "Sherpa ready:",
+      window._tts.sampleRate,
+      "Hz,",
+      window._tts.numSpeakers,
+      "speaker(s), init",
+      initMs.toFixed(0),
+      "ms"
     );
 
-    await tts.setVoice(VOICE_ID);
-
-    const elapsed = performance.now() - started;
-    loadTime.textContent = `${(elapsed / 1000).toFixed(2)} s`;
-
-    ready = true;
     speakButton.disabled = false;
     speakButton.textContent = "Speak sentence";
     setEngineState("Voice ready", "ready");
     setStatus(
       "Ready",
-      "Sherpa is prepared. Try several sentences to compare generation time.",
+      "Direct Sherpa is loaded. Cycle through the sentences and compare generation times.",
       100
     );
   } catch (error) {
-    console.error(error);
-    ready = false;
-    speakButton.disabled = true;
-    speakButton.textContent = "Voice failed to load";
-    setEngineState("Load failed", "error");
-    setStatus(
-      "Could not prepare Sherpa",
-      error?.message || String(error),
-      0
-    );
+    failLoad(error && error.message ? error.message : String(error));
   }
 }
 
-speakButton.addEventListener("click", async () => {
-  if (!ready || !tts) return;
+function loadScript(url) {
+  return new Promise(function(resolve, reject) {
+    var script = document.createElement("script");
+    script.src = url;
+    script.async = false;
+    script.onload = resolve;
+    script.onerror = function() {
+      reject(new Error("Could not load " + url));
+    };
+    document.body.appendChild(script);
+  });
+}
+
+async function prepareDirectSherpa() {
+  loadStarted = performance.now();
+
+  try {
+    setEngineState("Loading engine…", "loading");
+    setStatus(
+      "Loading Sherpa in background…",
+      "The page is already usable while the WASM runtime and voice are prepared.",
+      8
+    );
+
+    // Same order used by the working Sherpa demo.
+    await loadScript(wasmDir + "sherpa-onnx-wasm-main-tts.js");
+    await loadScript(wasmDir + "sherpa-onnx-tts.js");
+
+    // Normally Module.setStatus('') calls initTts(). This fallback handles
+    // builds that finish before the second helper script has loaded.
+    setTimeout(function() {
+      if (!window._tts && typeof window.createOfflineTts === "function") {
+        initTts();
+      }
+    }, 100);
+  } catch (error) {
+    failLoad(error && error.message ? error.message : String(error));
+  }
+}
+
+speakButton.addEventListener("click", function() {
+  if (!window._tts) return;
 
   stopAudio();
   speakButton.disabled = true;
@@ -197,75 +291,68 @@ speakButton.addEventListener("click", async () => {
   generationTime.textContent = "—";
   audioLength.textContent = "—";
 
-  const started = performance.now();
+  setStatus(
+    "Generating speech…",
+    "This part is running locally on the device.",
+    74
+  );
 
-  try {
-    setStatus(
-      "Generating speech…",
-      `Sentence ${sentenceIndex + 1} is being generated locally on this device.`,
-      72
-    );
+  // Yield one frame before the synchronous WASM generation starts.
+  setTimeout(function() {
+    try {
+      var t0 = performance.now();
 
-    const audioBytes = await tts.synthToBytes(sentences[sentenceIndex], {
-      format: "wav",
-      speed: Number(speedInput.value)
-    });
+      var result = window._tts.generate({
+        text: sentences[sentenceIndex],
+        sid: 0,
+        speed: Number(speedInput.value)
+      });
 
-    const elapsed = performance.now() - started;
-    generationTime.textContent = `${(elapsed / 1000).toFixed(2)} s`;
+      var elapsed = performance.now() - t0;
+      var duration = result.samples.length / result.sampleRate;
 
-    const blob = new Blob([audioBytes], { type: "audio/wav" });
-    const duration = await getWavDuration(blob);
-    if (duration) audioLength.textContent = `${duration.toFixed(2)} s`;
+      generationTime.textContent = (elapsed / 1000).toFixed(2) + " s";
+      audioLength.textContent = duration.toFixed(2) + " s";
 
-    currentUrl = URL.createObjectURL(blob);
-    currentAudio = new Audio(currentUrl);
-
-    setStatus(
-      "Playing",
-      `Generated in ${(elapsed / 1000).toFixed(2)} seconds.`,
-      100
-    );
-
-    await currentAudio.play();
-
-    currentAudio.addEventListener("ended", () => {
       setStatus(
-        "Ready",
-        "Choose another sentence or run this one again.",
+        "Playing",
+        duration.toFixed(2) + " seconds of audio generated in " +
+          (elapsed / 1000).toFixed(2) + " seconds.",
         100
       );
-    }, { once: true });
-  } catch (error) {
-    console.error(error);
-    setStatus(
-      "Generation failed",
-      error?.message || String(error),
-      0
-    );
-  } finally {
-    speakButton.disabled = false;
-    speakButton.textContent = "Speak sentence";
-  }
+
+      playAudio(result);
+    } catch (error) {
+      console.error(error);
+      setStatus(
+        "Generation failed",
+        error && error.message ? error.message : String(error),
+        0
+      );
+    } finally {
+      speakButton.disabled = false;
+      speakButton.textContent = "Speak sentence";
+    }
+  }, 50);
 });
 
 renderSentence();
 
-// Important: start after first paint so the visible page appears before the
-// expensive WASM/model work begins.
-requestAnimationFrame(() => {
-  setTimeout(prepareVoice, 150);
+// Let the GameHub UI paint first. Then begin the large download without the
+// user having to press a model-load button.
+requestAnimationFrame(function() {
+  setTimeout(prepareDirectSherpa, 200);
 });
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", async () => {
+  window.addEventListener("load", async function() {
     try {
-      const reg = await navigator.serviceWorker.register("./sw.js?v=0.5", {
+      var reg = await navigator.serviceWorker.register("./sw.js?v=0.6", {
         updateViaCache: "none"
       });
       await reg.update();
     } catch (error) {
-      console.error(error);
+      console.error("Service worker:", error);
     }
   });
 }

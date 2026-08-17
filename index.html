@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#e7dbd2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="TTS Test 4">
+  <meta name="apple-mobile-web-app-title" content="TTS Test 5">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>GameHub TTS Test 4</title>
+  <title>GameHub TTS Test 5</title>
   <link rel="manifest" href="./manifest.json?v=0.5">
   <link rel="apple-touch-icon" href="./icon-192.png?v=0.5">
   <link rel="icon" href="./icon-192.png?v=0.5">
@@ -18,8 +18,8 @@
   <main class="app-shell">
     <header class="page-header">
       <div>
-        <div class="eyebrow">GameHub experiment · v0.5</div>
-        <h1>Voice Test</h1>
+        <div class="eyebrow">GameHub experiment · v0.6</div>
+        <h1>Direct Sherpa</h1>
       </div>
       <div class="header-status">
         <div id="installState" class="status-pill">Web page</div>
@@ -88,12 +88,12 @@
       <button id="detailsToggle" class="text-button" type="button" aria-expanded="false">Show technical details</button>
       <div id="details" hidden>
         <dl>
-          <div><dt>Engine</dt><dd>Sherpa-ONNX WebAssembly</dd></div>
-          <div><dt>Wrapper</dt><dd>js-tts-wrapper 0.1.81</dd></div>
-          <div><dt>Voice</dt><dd>Piper Jenny Dioco — British English, medium</dd></div>
-          <div><dt>Model size</dt><dd>About 64 MB</dd></div>
+          <div><dt>Engine</dt><dd>Sherpa-ONNX WebAssembly — direct</dd></div>
+          <div><dt>Wrapper</dt><dd>None — direct Sherpa API</dd></div>
+          <div><dt>Voice</dt><dd>Piper LibriTTS-R medium — same family as successful test</dd></div>
+          <div><dt>Model size</dt><dd>fp32 model package — same precision as successful test</dd></div>
           <div><dt>Inference</dt><dd>Local on-device WASM</dd></div>
-          <div><dt>Loading</dt><dd>Starts automatically after the page appears</dd></div>
+          <div><dt>Loading</dt><dd>Direct WASM/model preload starts after first paint</dd></div>
         </dl>
       </div>
     </section>
