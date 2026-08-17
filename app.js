@@ -1,4 +1,4 @@
-// GameHub TTS Test v0.7
+// GameHub TTS Test v0.8
 // Direct Sherpa-ONNX WASM integration.
 // No npm package and no third-party JS TTS wrapper.
 //
@@ -49,7 +49,9 @@ var sentenceIndex = 0;
 var loadStarted = 0;
 var currentSource = null;
 var audioContext = null;
-var initAttempted = false;
+var initStarted = false;
+var runtimeReady = false;
+var helperReady = false;
 
 function isStandalone() {
   return window.matchMedia("(display-mode: standalone)").matches ||
@@ -151,8 +153,11 @@ var Module = {
   setStatus: function(text) {
     console.log("Sherpa:", text);
 
+    // Emscripten can clear its status before sherpa-onnx-tts.js has finished
+    // loading. v0.7 tried to initialise at that moment, which created a race.
     if (!text) {
-      initTts();
+      runtimeReady = true;
+      tryStartTts();
       return;
     }
 
@@ -173,6 +178,12 @@ var Module = {
     }
   },
 
+  onRuntimeInitialized: function() {
+    console.log("Sherpa WASM runtime initialized");
+    runtimeReady = true;
+    tryStartTts();
+  },
+
   onAbort: function(reason) {
     failLoad("Sherpa stopped: " + reason + " | Model path: " + wasmDir);
   }
@@ -180,21 +191,52 @@ var Module = {
 
 window.Module = Module;
 
+function tryStartTts() {
+  // We need BOTH pieces:
+  // 1. Emscripten/WASM runtime has finished starting.
+  // 2. sherpa-onnx-tts.js has defined createOfflineTts().
+  //
+  // In v0.7 condition 1 could happen first, causing a false load failure.
+  if (initStarted) return;
+  if (!runtimeReady) return;
+  if (!helperReady) return;
+  if (typeof window.createOfflineTts !== "function" &&
+      typeof createOfflineTts !== "function") {
+    return;
+  }
+
+  initTts();
+}
+
 function initTts() {
-  if (initAttempted) return;
-  initAttempted = true;
+  if (initStarted) return;
+  initStarted = true;
 
   try {
     setEngineState("Starting voice…", "loading");
     setStatus(
       "Starting voice…",
-      "The model has downloaded. Sherpa is creating the reusable TTS engine.",
+      "Runtime and Sherpa helper are both ready. Creating the reusable TTS engine.",
       90
     );
 
+    var createFn = window.createOfflineTts ||
+      (typeof createOfflineTts === "function" ? createOfflineTts : null);
+
+    if (!createFn) {
+      // This should no longer happen, but don't permanently poison the retry.
+      initStarted = false;
+      setStatus(
+        "Waiting for Sherpa helper…",
+        "The WASM runtime is ready; waiting for the TTS helper script.",
+        86
+      );
+      return;
+    }
+
     var t0 = performance.now();
 
-    window._tts = createOfflineTts(Module, {
+    window._tts = createFn(Module, {
       offlineTtsModelConfig: {
         offlineTtsVitsModelConfig: {
           model: "./model.onnx",
@@ -239,7 +281,12 @@ function initTts() {
       100
     );
   } catch (error) {
-    failLoad(error && error.message ? error.message : String(error));
+    initStarted = false;
+    failLoad(
+      (error && error.message ? error.message : String(error)) +
+      " | runtimeReady=" + runtimeReady +
+      " helperReady=" + helperReady
+    );
   }
 }
 
@@ -267,17 +314,25 @@ async function prepareDirectSherpa() {
       8
     );
 
-    // Same order used by the working Sherpa demo.
+    // Same two scripts as the working demo. The important v0.8 change is
+    // that we DO NOT try to create OfflineTts until both are independently ready.
     await loadScript(wasmDir + "sherpa-onnx-wasm-main-tts.js");
-    await loadScript(wasmDir + "sherpa-onnx-tts.js");
 
-    // Normally Module.setStatus('') calls initTts(). This fallback handles
-    // builds that finish before the second helper script has loaded.
-    setTimeout(function() {
-      if (!window._tts && typeof window.createOfflineTts === "function") {
-        initTts();
-      }
-    }, 100);
+    setStatus(
+      "Sherpa runtime loaded…",
+      "Loading the small TTS helper script next.",
+      82
+    );
+
+    await loadScript(wasmDir + "sherpa-onnx-tts.js");
+    helperReady = true;
+    console.log("Sherpa TTS helper loaded");
+
+    tryStartTts();
+
+    // A delayed retry is harmless and protects against Safari delivering
+    // runtime callbacks in an unusual order.
+    setTimeout(tryStartTts, 250);
   } catch (error) {
     failLoad(error && error.message ? error.message : String(error));
   }
@@ -348,7 +403,7 @@ requestAnimationFrame(function() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async function() {
     try {
-      var reg = await navigator.serviceWorker.register("./sw.js?v=0.7", {
+      var reg = await navigator.serviceWorker.register("./sw.js?v=0.8", {
         updateViaCache: "none"
       });
       await reg.update();

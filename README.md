@@ -1,33 +1,37 @@
-# GameHub TTS Test v0.7 — fixed direct Sherpa path
+# GameHub TTS Test v0.8 — Safari startup race fix
 
-This is the corrected version of v0.6.
+v0.7 got significantly further than v0.6, but could still report `Voice failed to load`
+while the Sherpa WASM runtime continued saying `Running...`.
 
-## Fix
+That combination exposed a race in our integration.
 
-The fp32 Sherpa demo directory does **not** include an `-fp32` suffix.
+## What was wrong
 
-v0.6 incorrectly requested:
+There are two independently loaded pieces:
 
-`wasm-piper-en-libritts_r-medium-fp32/`
+1. The Emscripten / Sherpa WASM runtime.
+2. `sherpa-onnx-tts.js`, which defines `createOfflineTts()`.
 
-v0.7 correctly requests:
+In v0.7, the WASM runtime could finish first and clear its status. That immediately called
+our `initTts()` function even if the second helper script had not finished loading yet.
 
-`wasm-piper-en-libritts_r-medium/`
+The first attempt therefore failed because `createOfflineTts()` did not exist yet, and our
+old `initAttempted` flag prevented a later retry after the helper arrived.
 
-Quantised variants would still use suffixes such as `-int8`.
+## v0.8
 
-Everything else remains deliberately unchanged so this is a clean test of the path correction.
+The page now tracks two explicit flags:
 
-## Test
+- `runtimeReady`
+- `helperReady`
 
-Upload all files over v0.6.
+It creates the TTS engine only when **both** are ready.
 
-The page should visibly say:
+There is also a delayed Safari-safe retry, and failures now report both readiness states.
 
-`GameHub experiment · v0.7`
+No model, sentence, UI, or inference settings have been changed, so this remains a clean
+diagnostic step.
 
-Then wait to see whether the top-right indicator reaches:
+Upload all files over v0.7 and confirm the page says:
 
-`Voice ready`
-
-If it does, try the first short sentence and then cycle through the longer sentences.
+`GameHub experiment · v0.8`

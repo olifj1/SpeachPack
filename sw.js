@@ -1,10 +1,10 @@
-const CACHE = "gamehub-tts-test-v0.7";
+const CACHE = "gamehub-tts-test-v0.8";
 const APP_SHELL = [
-  "./style.css?v=0.7",
-  "./app.js?v=0.7",
-  "./manifest.json?v=0.7",
-  "./icon-192.png?v=0.7",
-  "./icon-512.png?v=0.7"
+  "./style.css?v=0.8",
+  "./app.js?v=0.8",
+  "./manifest.json?v=0.8",
+  "./icon-192.png?v=0.8",
+  "./icon-512.png?v=0.8"
 ];
 
 self.addEventListener("install", event => {
