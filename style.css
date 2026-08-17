@@ -343,3 +343,11 @@ dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
     border-radius: 5px;
   }
 }
+
+
+/* v0.2: engine/voice/speed/timeout controls */
+@media (min-width: 541px) {
+  .controls-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

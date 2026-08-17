@@ -1,5 +1,5 @@
 {
-  "name": "GameHub TTS Test",
+  "name": "GameHub TTS Test 2",
   "short_name": "TTS Test",
   "description": "A standalone GameHub-style test of local Kokoro neural text-to-speech.",
   "start_url": "./index.html",

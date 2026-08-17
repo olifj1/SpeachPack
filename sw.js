@@ -1,4 +1,4 @@
-const CACHE = "gamehub-tts-test-v0.1";
+const CACHE = "gamehub-tts-test-v0.2";
 const APP_SHELL = [
   "./",
   "./index.html",

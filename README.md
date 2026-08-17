@@ -1,65 +1,37 @@
-# GameHub TTS Test v0.1
+# GameHub TTS Test v0.2
 
-A deliberately small standalone PWA for testing whether local neural text-to-speech is practical on the same iPhone/iPad setup as GameHub.
+Test 2 is aimed specifically at the iPhone/iPad Safari result from v0.1, where Kokoro loaded successfully but stalled indefinitely during generation.
 
-## What it tests
+## What changed
 
-- Kokoro 82M neural TTS running on-device in the browser through WebAssembly.
-- British female and male Kokoro voices.
-- Model load time.
-- Sentence generation time.
-- Safari versus Home Screen/PWA behaviour.
-- A second/offline run after the model has already been downloaded.
-- Portrait-only layout and the same neutral PWA/browser background treatment used by GameHub.
+- The default phrase is now only: `Hello, how are you?`
+- Piper is now the default engine.
+- Kokoro remains available as a comparison.
+- Generation has a selectable 15 / 30 / 60 second timeout.
+- A failed/hung generation now reports a timeout instead of leaving the page permanently on “Generating…”.
+- Piper voice download/setup is separated from generation so we can see which stage fails.
+- The same PWA, Home Screen, neutral background and portrait-only setup is retained.
 
-## GitHub Pages setup
+## Why Piper
 
-Upload every file in this ZIP directly into the root of a new repository.
+Piper is substantially lighter than Kokoro and is explicitly designed for local speech synthesis. The browser library used here runs Piper through WebAssembly/ONNX in the browser and stores downloaded voice models in browser storage.
 
-Then in GitHub:
+## First test
 
-1. Open **Settings → Pages**.
-2. Set **Source** to **Deploy from a branch**.
-3. Choose the branch containing these files (normally `main`) and `/ (root)`.
-4. Save and wait for GitHub Pages to publish.
-5. Open the published HTTPS page in Safari.
+1. Leave **Engine = Piper**.
+2. Leave the short phrase `Hello, how are you?`.
+3. Choose a British voice.
+4. Leave timeout at 30 seconds.
+5. Press **Run TTS test**.
 
-No npm install or build step is required.
+If Piper works, try the same phrase with Kokoro immediately afterward.
 
-## Important first-run behaviour
+## GitHub Pages
 
-The repository itself stays small.
+Upload all files directly into the repository root and publish from `main / (root)`, exactly as with v0.1.
 
-When **Load voice & speak** is pressed for the first time, the page imports `kokoro-js` 1.2.1 and downloads the quantised Kokoro model from Hugging Face. The q8 ONNX model is about 92 MB, plus supporting runtime/model files.
+No build step is required.
 
-Inference itself then happens on the device; sentences are not sent to a speech API.
+## Note
 
-This first version intentionally leaves the model download under Kokoro/Transformers.js's own browser caching rather than trying to force a ~100 MB cross-origin model into our service worker. The PWA service worker caches only the local app shell.
-
-## Suggested test
-
-Run exactly the same sentence in this order:
-
-1. Safari, first ever run — note model load and generation times.
-2. Generate it again immediately — model load should show `cached`.
-3. Add the site to the Home Screen and run the same sentence.
-4. After one successful Home Screen run, close it, turn off Wi-Fi, reopen it and try again.
-
-The fourth test is especially useful on iOS/iPadOS because it tells us whether the browser's model/runtime cache survives in the PWA context the way we need.
-
-## Files
-
-Everything is deliberately flat in the repository root:
-
-- `index.html`
-- `app.js`
-- `style.css`
-- `manifest.json`
-- `sw.js`
-- `icon-192.png`
-- `icon-512.png`
-- `README.md`
-
-## Engine
-
-This test uses Kokoro.js with `onnx-community/Kokoro-82M-v1.0-ONNX`, `q8`, forced to the WebAssembly backend. That makes the test conservative and more relevant to Safari/iOS than relying on WebGPU.
+This is deliberately an experimental compatibility test. Piper itself is being loaded from an ESM CDN and its voice model is fetched on first use. Once we know which engine behaves correctly on iOS/iPadOS, the next step would be to make its runtime/assets more self-contained and robust for the real GameHub PWA.

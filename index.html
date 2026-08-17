@@ -29,31 +29,39 @@
 
     <section class="panel main-panel">
       <label class="field-label" for="textInput">Sentence</label>
-      <textarea id="textInput" rows="5">The little fox looked up at the moon and wondered what adventures tomorrow might bring.</textarea>
+      <textarea id="textInput" rows="5">Hello, how are you?</textarea>
 
       <div class="controls-grid">
         <label class="control">
-          <span>Voice</span>
-          <select id="voiceSelect">
-            <option value="bf_emma">Emma — British female</option>
-            <option value="bf_alice">Alice — British female</option>
-            <option value="bf_isabella">Isabella — British female</option>
-            <option value="bf_lily">Lily — British female</option>
-            <option value="bm_daniel">Daniel — British male</option>
-            <option value="bm_fable">Fable — British male</option>
-            <option value="bm_george">George — British male</option>
-            <option value="bm_lewis">Lewis — British male</option>
+          <span>Engine</span>
+          <select id="engineSelect">
+            <option value="piper" selected>Piper — lighter WASM test</option>
+            <option value="kokoro">Kokoro — previous engine</option>
           </select>
+        </label>
+
+        <label class="control">
+          <span>Voice</span>
+          <select id="voiceSelect"></select>
         </label>
 
         <label class="control">
           <span>Speed <strong id="speedReadout">1.00×</strong></span>
           <input id="speedInput" type="range" min="0.75" max="1.20" value="1" step="0.05">
         </label>
+
+        <label class="control">
+          <span>Generation timeout</span>
+          <select id="timeoutSelect">
+            <option value="15">15 seconds</option>
+            <option value="30" selected>30 seconds</option>
+            <option value="60">60 seconds</option>
+          </select>
+        </label>
       </div>
 
       <button id="generateButton" class="primary-button" type="button">
-        <span id="buttonLabel">Load voice & speak</span>
+        <span id="buttonLabel">Run TTS test</span>
       </button>
 
       <div id="statusBox" class="status-box" aria-live="polite">
@@ -62,7 +70,7 @@
           <strong id="statusText">Ready</strong>
         </div>
         <div class="meter" aria-hidden="true"><div id="meterFill"></div></div>
-        <p id="statusDetail">The first run downloads the Kokoro model. Later runs should use the browser cache.</p>
+        <p id="statusDetail">Test 2 starts with Piper and a very short phrase. If generation stalls, the test stops automatically and reports it.</p>
       </div>
     </section>
 
@@ -89,11 +97,11 @@
       <button id="detailsToggle" class="text-button" type="button" aria-expanded="false">Show technical details</button>
       <div id="details" hidden>
         <dl>
-          <div><dt>Engine</dt><dd>Kokoro.js 1.2.1</dd></div>
-          <div><dt>Model</dt><dd>Kokoro-82M ONNX</dd></div>
-          <div><dt>Quantisation</dt><dd>q8</dd></div>
+          <div><dt>Test version</dt><dd>v0.2</dd></div>
+          <div><dt>Piper</dt><dd>@mintplex-labs/piper-tts-web 1.0.3</dd></div>
+          <div><dt>Kokoro</dt><dd>Kokoro.js 1.2.1</dd></div>
           <div><dt>Inference</dt><dd>On-device WebAssembly</dd></div>
-          <div><dt>Model source</dt><dd>Hugging Face on first load</dd></div>
+          <div><dt>Purpose</dt><dd>Compare a lighter Piper model against Kokoro on iOS/iPadOS Safari.</dd></div>
         </dl>
       </div>
     </section>
