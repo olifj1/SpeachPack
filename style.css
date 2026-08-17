@@ -1,0 +1,345 @@
+:root {
+  --bg: #e7dbd2;
+  --panel: rgba(255, 252, 248, 0.72);
+  --panel-solid: #f7f1ec;
+  --ink: #252b33;
+  --muted: #766e69;
+  --line: rgba(59, 52, 48, 0.14);
+  --line-strong: rgba(59, 52, 48, 0.28);
+  --accent: #ca765d;
+  --accent-dark: #a95d48;
+  --shadow: 0 14px 34px rgba(72, 58, 50, 0.10);
+  font-family: ui-rounded, "SF Pro Rounded", "SF Pro Display", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  min-height: 100%;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+button, textarea, select, input { font: inherit; }
+
+.app-shell {
+  width: min(760px, 100%);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding:
+    max(28px, env(safe-area-inset-top))
+    18px
+    max(28px, env(safe-area-inset-bottom));
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 8px 4px 26px;
+}
+
+.eyebrow {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(34px, 7vw, 54px);
+  line-height: .98;
+  letter-spacing: -.045em;
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+  letter-spacing: -.02em;
+}
+
+.status-pill {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255,255,255,.32);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.panel {
+  margin-bottom: 14px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,.48);
+  border-radius: 24px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.main-panel {
+  padding: 20px;
+}
+
+.field-label,
+.control > span {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
+textarea,
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  outline: none;
+  background: rgba(255,255,255,.52);
+  color: var(--ink);
+}
+
+textarea {
+  min-height: 130px;
+  resize: vertical;
+  padding: 15px 16px;
+  font-size: 19px;
+  line-height: 1.42;
+}
+
+textarea:focus,
+select:focus {
+  border-color: rgba(202,118,93,.55);
+  box-shadow: 0 0 0 3px rgba(202,118,93,.12);
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+select {
+  height: 48px;
+  padding: 0 13px;
+  font-weight: 700;
+}
+
+.control input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  margin-top: 9px;
+}
+
+.control strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.primary-button {
+  width: 100%;
+  min-height: 62px;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--accent);
+  color: #fffaf7;
+  box-shadow: 0 8px 18px rgba(153, 80, 58, .18);
+  font-size: 18px;
+  font-weight: 850;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.primary-button:active {
+  transform: translateY(1px);
+  background: var(--accent-dark);
+}
+
+.primary-button:disabled {
+  opacity: .62;
+  cursor: default;
+}
+
+.status-box {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: rgba(255,255,255,.30);
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.status-row strong {
+  color: var(--ink);
+  text-align: right;
+}
+
+.meter {
+  height: 6px;
+  margin: 11px 0 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(37,43,51,.08);
+}
+
+#meterFill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width .2s ease;
+}
+
+.status-box p,
+.small-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin-bottom: 13px;
+}
+
+.metric {
+  min-width: 0;
+  padding: 13px 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,.32);
+  text-align: center;
+}
+
+.metric span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.metric strong {
+  display: block;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.text-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+dl {
+  margin: 14px 0 0;
+}
+
+dl > div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+dt { color: var(--muted); }
+dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+
+.orientation-guard { display: none; }
+
+@media (max-width: 540px) {
+  .app-shell { padding-left: 14px; padding-right: 14px; }
+  .page-header { margin-bottom: 22px; }
+  .controls-grid { grid-template-columns: 1fr; }
+  .panel { border-radius: 21px; }
+  textarea { min-height: 122px; font-size: 18px; }
+}
+
+@media (orientation: landscape) {
+  .orientation-guard {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding:
+      max(24px, env(safe-area-inset-top))
+      max(24px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(24px, env(safe-area-inset-left));
+    background: var(--bg);
+    text-align: center;
+  }
+
+  .rotate-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .rotate-card strong {
+    font-size: clamp(28px, 5vw, 44px);
+    letter-spacing: -.035em;
+  }
+
+  .rotate-card p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .phone-icon {
+    position: relative;
+    width: 54px;
+    height: 82px;
+    margin-bottom: 6px;
+    border: 3px solid rgba(37,43,51,.68);
+    border-radius: 13px;
+    transform: rotate(-90deg);
+  }
+
+  .phone-icon span {
+    position: absolute;
+    inset: 8px 6px 13px;
+    border: 2px solid rgba(37,43,51,.18);
+    border-radius: 5px;
+  }
+}
