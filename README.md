@@ -1,36 +1,28 @@
-# GameHub TTS Test v0.10 — matched Sherpa build
+# GameHub TTS Test v0.11 — cache-clean diagnostic baseline
 
-This version addresses the exact failure identified by v0.9:
+The v0.10 screenshot proved that the HTML had updated to v0.10, but the error text still
+contained `runtimeReady=true helperReady=true`, which only existed in the older v0.8/v0.9
+JavaScript.
 
-`call_indirect to a signature that does not match`
+That means Safari was combining **new HTML with old cached JavaScript**.
 
-That error occurred at `createOfflineTts()` after the model/runtime had downloaded successfully,
-which strongly indicated that JavaScript glue and WebAssembly exports were not from one coherent build.
+## v0.11 changes
 
-## v0.10 change
+- `app.js` is renamed to `app-v011.js`.
+- `style.css` is renamed to `style-v011.css`.
+- No service worker is registered.
+- On page load, existing GameHub TTS Test service workers are unregistered.
+- Old `gamehub-tts-test-*` Cache Storage entries are deleted.
+- The old `sw.js` is replaced by a self-unregistering cleanup worker.
+- The diagnostic log must begin with:
 
-Every Sherpa runtime component now comes from the same official k2-fsa browser TTS Space:
+  `START v0.11 — app-v011.js`
 
-- `sherpa-onnx-wasm-main-tts.js`
-- `sherpa-onnx-wasm-main-tts.wasm`
-- `sherpa-onnx-wasm-main-tts.data`
-- `sherpa-onnx-tts.js`
+This gives us a clean, uncached baseline for the matched Sherpa build.
 
-The GameHub UI remains local in this repository.
+## Upload
 
-The model is the same English Piper/LibriTTS-R family used by Sherpa's standard WebAssembly TTS example.
+Delete/replace the previous repo contents with all files in this ZIP.
 
-## Test
-
-Upload all files over v0.9 and confirm:
-
-`GameHub experiment · v0.10`
-
-The desired sequence is:
-
-1. background download
-2. `Voice ready`
-3. press `Speak sentence`
-4. cycle through all six sentences and compare generation time with audio duration
-
-The diagnostic log remains enabled in case this matched-build test exposes anything else.
+Then open the normal Safari URL once. If the diagnostic log begins with the v0.11 line above,
+we know the HTML and JavaScript genuinely belong to the same build.
