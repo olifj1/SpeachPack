@@ -1,37 +1,40 @@
-# GameHub TTS Test v0.2
+# GameHub TTS Test v0.3
 
-Test 2 is aimed specifically at the iPhone/iPad Safari result from v0.1, where Kokoro loaded successfully but stalled indefinitely during generation.
+This build is primarily an update/caching fix for iPhone/iPad PWAs.
 
 ## What changed
 
-- The default phrase is now only: `Hello, how are you?`
-- Piper is now the default engine.
-- Kokoro remains available as a comparison.
-- Generation has a selectable 15 / 30 / 60 second timeout.
-- A failed/hung generation now reports a timeout instead of leaving the page permanently on “Generating…”.
-- Piper voice download/setup is separated from generation so we can see which stage fails.
-- The same PWA, Home Screen, neutral background and portrait-only setup is retained.
+- The page now visibly says `GameHub experiment · v0.3` at the top.
+- Piper remains the default engine.
+- The short `Hello, how are you?` test remains the default.
+- Local CSS/JS/manifest/icon URLs are versioned with `?v=0.3`.
+- The service worker is now **network-first for page navigation/HTML**.
+- Old GameHub TTS Test caches are removed when the new worker activates.
+- `skipWaiting()` and `clients.claim()` are used.
+- The app explicitly asks the browser to check for a service-worker update.
+- If a new worker takes control while the page is open, the page reloads once automatically.
 
-## Why Piper
+This should make future GitHub Pages updates much less likely to appear stuck on an old installed-PWA version.
 
-Piper is substantially lighter than Kokoro and is explicitly designed for local speech synthesis. The browser library used here runs Piper through WebAssembly/ONNX in the browser and stores downloaded voice models in browser storage.
+## First check
 
-## First test
+After uploading v0.3, open the normal Safari URL once.
 
-1. Leave **Engine = Piper**.
-2. Leave the short phrase `Hello, how are you?`.
-3. Choose a British voice.
-4. Leave timeout at 30 seconds.
-5. Press **Run TTS test**.
+You should immediately see:
 
-If Piper works, try the same phrase with Kokoro immediately afterward.
+`GAMEHUB EXPERIMENT · V0.3`
+
+and the controls should include:
+
+- Engine
+- `Piper — lighter WASM test`
+- Voice
+- Speed
+- Generation timeout
+- `Run TTS test`
+
+If Safari still shows the old page, refresh once. If an already-installed Home Screen copy still shows the old version, fully close it and reopen it after visiting the Safari page once.
 
 ## GitHub Pages
 
-Upload all files directly into the repository root and publish from `main / (root)`, exactly as with v0.1.
-
-No build step is required.
-
-## Note
-
-This is deliberately an experimental compatibility test. Piper itself is being loaded from an ESM CDN and its voice model is fetched on first use. Once we know which engine behaves correctly on iOS/iPadOS, the next step would be to make its runtime/assets more self-contained and robust for the real GameHub PWA.
+Upload all files directly into the repository root, replacing the previous files.

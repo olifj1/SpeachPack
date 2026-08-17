@@ -278,7 +278,23 @@ await updateVoiceList();
 setStatus("Ready for Test 2", "Start with Piper and the short phrase “Hello, how are you?”.", 0);
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(console.error);
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("./sw.js?v=0.3", {
+        updateViaCache: "none"
+      });
+
+      await registration.update();
+
+      // If a new worker takes control while this page is open, reload once so
+      // the visible UI immediately matches the newly deployed version.
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (sessionStorage.getItem("tts-sw-reloaded") === "1") return;
+        sessionStorage.setItem("tts-sw-reloaded", "1");
+        window.location.reload();
+      });
+    } catch (error) {
+      console.error("Service worker registration failed:", error);
+    }
   });
 }
