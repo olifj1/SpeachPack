@@ -1,10 +1,10 @@
-const CACHE = "gamehub-tts-test-v0.4";
+const CACHE = "gamehub-tts-test-v0.5";
 const APP_SHELL = [
-  "./style.css?v=0.4",
-  "./app.js?v=0.4",
-  "./manifest.json?v=0.4",
-  "./icon-192.png?v=0.4",
-  "./icon-512.png?v=0.4"
+  "./style.css?v=0.5",
+  "./app.js?v=0.5",
+  "./manifest.json?v=0.5",
+  "./icon-192.png?v=0.5",
+  "./icon-512.png?v=0.5"
 ];
 
 self.addEventListener("install", event => {
@@ -30,6 +30,8 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
+
+  // Let Sherpa, jsDelivr and model downloads manage their own caching.
   if (url.origin !== self.location.origin) return;
 
   if (event.request.mode === "navigate" || event.request.destination === "document") {
@@ -41,8 +43,6 @@ self.addEventListener("fetch", event => {
   }
 
   event.respondWith(
-    caches.match(event.request).then(cached =>
-      cached || fetch(event.request)
-    )
+    caches.match(event.request).then(cached => cached || fetch(event.request))
   );
 });

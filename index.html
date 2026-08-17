@@ -6,71 +6,94 @@
   <meta name="theme-color" content="#e7dbd2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="TTS Test 3">
+  <meta name="apple-mobile-web-app-title" content="TTS Test 4">
   <meta name="mobile-web-app-capable" content="yes">
-
-  <title>GameHub TTS Test 3</title>
-
-  <link rel="manifest" href="./manifest.json?v=0.4">
-  <link rel="apple-touch-icon" href="./icon-192.png?v=0.4">
-  <link rel="icon" href="./icon-192.png?v=0.4">
-  <link rel="stylesheet" href="./style.css?v=0.4">
+  <title>GameHub TTS Test 4</title>
+  <link rel="manifest" href="./manifest.json?v=0.5">
+  <link rel="apple-touch-icon" href="./icon-192.png?v=0.5">
+  <link rel="icon" href="./icon-192.png?v=0.5">
+  <link rel="stylesheet" href="./style.css?v=0.5">
 </head>
-
 <body>
   <main class="app-shell">
     <header class="page-header">
       <div>
-        <div class="eyebrow">GameHub experiment · v0.4</div>
-        <h1>Sherpa TTS</h1>
+        <div class="eyebrow">GameHub experiment · v0.5</div>
+        <h1>Voice Test</h1>
       </div>
-      <div id="installState" class="status-pill">Web page</div>
+      <div class="header-status">
+        <div id="installState" class="status-pill">Web page</div>
+        <div id="engineState" class="status-pill loading">Preparing voice…</div>
+      </div>
     </header>
 
-    <section class="panel main-panel">
-      <div class="test-number">TEST 3</div>
-      <h2 class="sherpa-heading">Sherpa-ONNX WebAssembly</h2>
-      <p class="intro-copy">
-        This test deliberately uses an existing Sherpa-ONNX browser demo rather than another wrapper.
-        That lets us answer the important question: can Sherpa actually generate speech quickly on this iPhone/iPad?
-      </p>
-
-      <div class="test-instructions">
-        <strong>Use these settings first:</strong>
-        <span>Precision: int8 (~20 MB)</span>
-        <span>Text: “Hello, how are you?”</span>
-        <span>Speed: 1.0</span>
+    <section class="panel sentence-panel">
+      <div class="panel-topline">
+        <span class="section-label">Sentence <strong id="sentenceNumber">1 / 6</strong></span>
+        <div class="sentence-nav">
+          <button id="previousSentence" class="small-button" type="button" aria-label="Previous sentence">←</button>
+          <button id="nextSentence" class="small-button" type="button" aria-label="Next sentence">→</button>
+        </div>
       </div>
 
-      <button id="openTestButton" class="primary-button" type="button">
-        Open Sherpa test
+      <div id="sentenceText" class="sentence-text">
+        Hello, how are you?
+      </div>
+
+      <button id="speakButton" class="primary-button" type="button" disabled>
+        Preparing voice…
       </button>
 
-      <p class="small-note centred-note">
-        The test opens the Sherpa browser demo directly. If it generates speech promptly on the same device,
-        we know Sherpa/WASM is worth integrating properly into GameHub.
+      <div class="sub-controls">
+        <label class="control">
+          <span>Speed <strong id="speedReadout">1.00×</strong></span>
+          <input id="speedInput" type="range" min="0.80" max="1.20" value="1" step="0.05">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel status-panel">
+      <div class="status-row">
+        <span>Status</span>
+        <strong id="statusText">Starting Sherpa in the background…</strong>
+      </div>
+      <div class="meter" aria-hidden="true"><div id="meterFill"></div></div>
+      <p id="statusDetail">
+        You can cycle through the sentences while the voice model loads.
       </p>
     </section>
 
     <section class="panel measurements">
-      <h2>What to watch</h2>
-      <div class="check-grid">
-        <div><strong>1</strong><span>Does the int8 model load?</span></div>
-        <div><strong>2</strong><span>Does Generate finish?</span></div>
-        <div><strong>3</strong><span>How many seconds does it take?</span></div>
-        <div><strong>4</strong><span>Is the voice good enough?</span></div>
+      <h2>Timing</h2>
+      <div class="metrics">
+        <div class="metric">
+          <span>Initial setup</span>
+          <strong id="loadTime">—</strong>
+        </div>
+        <div class="metric">
+          <span>Generation</span>
+          <strong id="generationTime">—</strong>
+        </div>
+        <div class="metric">
+          <span>Audio length</span>
+          <strong id="audioLength">—</strong>
+        </div>
       </div>
+      <p class="small-note">
+        The useful number is generation time. Once the voice is ready, try several short and long sentences in a row.
+      </p>
     </section>
 
     <section class="panel technical">
       <button id="detailsToggle" class="text-button" type="button" aria-expanded="false">Show technical details</button>
       <div id="details" hidden>
         <dl>
-          <div><dt>Engine</dt><dd>sherpa-onnx</dd></div>
-          <div><dt>Runtime</dt><dd>WebAssembly</dd></div>
-          <div><dt>Model</dt><dd>Piper English LibriTTS-R medium</dd></div>
-          <div><dt>Test precision</dt><dd>int8 (~20 MB)</dd></div>
-          <div><dt>Execution</dt><dd>Local browser inference</dd></div>
+          <div><dt>Engine</dt><dd>Sherpa-ONNX WebAssembly</dd></div>
+          <div><dt>Wrapper</dt><dd>js-tts-wrapper 0.1.81</dd></div>
+          <div><dt>Voice</dt><dd>Piper Jenny Dioco — British English, medium</dd></div>
+          <div><dt>Model size</dt><dd>About 64 MB</dd></div>
+          <div><dt>Inference</dt><dd>Local on-device WASM</dd></div>
+          <div><dt>Loading</dt><dd>Starts automatically after the page appears</dd></div>
         </dl>
       </div>
     </section>
@@ -84,6 +107,6 @@
     </div>
   </div>
 
-  <script src="./app.js?v=0.4"></script>
+  <script type="module" src="./app.js?v=0.5"></script>
 </body>
 </html>

@@ -1,35 +1,44 @@
-# GameHub TTS Test v0.4 — Sherpa Test 3
+# GameHub TTS Test v0.5 — integrated Sherpa test
 
-This version takes a deliberately different approach.
+This is the first test that keeps the Sherpa experience inside our own GameHub-style page.
 
-Instead of immediately trying to integrate another JavaScript wrapper, it opens a working
-Sherpa-ONNX WebAssembly Piper demo directly. That gives us a clean compatibility/performance
-test on the actual iPhone/iPad.
+## What it does
 
-## First test settings
+- Starts Sherpa-ONNX WebAssembly automatically after the page has painted.
+- Loads the voice in the background while the user can browse the test sentences.
+- Uses a British Piper voice: Jenny Dioco, medium quality.
+- Provides six sentences ranging from a tiny phrase to Reading/Real Maths-style prompts.
+- Shows initial setup time, generation time and (where readable from the WAV header) audio length.
+- Keeps the same PWA/Home Screen and portrait-only setup as the previous tests.
 
-- Precision: **int8 (~20 MB)**
-- Text: **Hello, how are you?**
-- Speed: **1.0**
-- Press **Generate**
+## First run
 
-## Why this test is useful
+The initial run is expected to be the slowest because the Sherpa runtime and voice model have to be downloaded and prepared.
 
-Kokoro and the previous Piper wrapper both failed during generation on iOS Safari.
+Wait for the top-right status to say:
 
-Sherpa-ONNX officially supports TTS through WebAssembly. The linked browser demo uses Sherpa
-directly and provides an int8 Piper model of roughly 20 MB, which is a substantially lighter
-test than the earlier ~92 MB Kokoro configuration.
+`Voice ready`
 
-If this direct Sherpa demo also fails or takes an impractical amount of time, that is a strong
-signal that we should stop pursuing local browser neural TTS for GameHub for now.
+Then press **Speak sentence**.
 
-If it works promptly, the next step is to package the same Sherpa runtime/model into the test
-repository and then into GameHub.
+Cycle through the sentences with the left/right arrows and compare the generation times.
+
+## Why the model is larger than the 20 MB demo
+
+The direct Sherpa compatibility demo proved that WebAssembly generation works on the iPhone.
+
+This integrated test uses the published Sherpa browser wrapper/model catalogue. The selected British medium Piper model is roughly 64 MB. The goal of this version is to prove that our own page can preload and drive Sherpa reliably. If that works, we can optimise the model/runtime packaging next.
 
 ## GitHub Pages
 
-Upload all files in this ZIP directly into the repository root, replacing v0.3.
+Upload all files directly into the repository root, replacing v0.4.
 
-The page visibly shows **GameHub experiment · v0.4** so it is easy to confirm the latest build
-has actually loaded.
+The page visibly says:
+
+`GameHub experiment · v0.5`
+
+so it is easy to confirm that the latest version has loaded.
+
+## External runtime/model assets
+
+For this experimental build the small repository files remain local, while the Sherpa runtime and model catalogue are loaded from the published js-tts-wrapper/jsDelivr assets. This avoids committing a 60+ MB model into the test repository before we know the integration works.
