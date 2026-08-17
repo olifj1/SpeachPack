@@ -1,4 +1,4 @@
-// GameHub TTS Test v0.8
+// GameHub TTS Test v0.9
 // Direct Sherpa-ONNX WASM integration.
 // No npm package and no third-party JS TTS wrapper.
 //
@@ -44,6 +44,64 @@ var generationTime = document.querySelector("#generationTime");
 var audioLength = document.querySelector("#audioLength");
 var detailsToggle = document.querySelector("#detailsToggle");
 var details = document.querySelector("#details");
+
+
+var diagnosticLog = document.querySelector("#diagnosticLog");
+var copyLogButton = document.querySelector("#copyLogButton");
+var diagnosticLines = [];
+var firstFailure = null;
+
+function diag(label, value) {
+  var elapsed = loadStarted ? ((performance.now() - loadStarted) / 1000).toFixed(2) : "0.00";
+  var text = "[" + elapsed + "s] " + label;
+  if (value !== undefined) {
+    if (value instanceof Error) {
+      text += ": " + value.name + ": " + value.message;
+      if (value.stack) text += "\n" + value.stack;
+    } else if (typeof value === "object") {
+      try { text += ": " + JSON.stringify(value); }
+      catch (_) { text += ": " + String(value); }
+    } else {
+      text += ": " + String(value);
+    }
+  }
+  diagnosticLines.push(text);
+  if (diagnosticLog) {
+    diagnosticLog.textContent = diagnosticLines.join("\n");
+    diagnosticLog.scrollTop = diagnosticLog.scrollHeight;
+  }
+  console.log("[TTS diagnostic]", text);
+}
+
+if (copyLogButton) {
+  copyLogButton.addEventListener("click", async function() {
+    try {
+      await navigator.clipboard.writeText(diagnosticLines.join("\n"));
+      copyLogButton.textContent = "Copied";
+      setTimeout(function(){ copyLogButton.textContent = "Copy"; }, 1200);
+    } catch (_) {
+      copyLogButton.textContent = "Screenshot";
+    }
+  });
+}
+
+window.addEventListener("error", function(event) {
+  diag("WINDOW ERROR", {
+    message: event.message,
+    source: event.filename,
+    line: event.lineno,
+    column: event.colno
+  });
+});
+
+window.addEventListener("unhandledrejection", function(event) {
+  diag("UNHANDLED PROMISE", event.reason instanceof Error ? event.reason : String(event.reason));
+});
+
+diag("Page", location.href);
+diag("User agent", navigator.userAgent);
+diag("Standalone", isStandalone());
+diag("WebAssembly", typeof WebAssembly);
 
 var sentenceIndex = 0;
 var loadStarted = 0;
@@ -138,6 +196,17 @@ function playAudio(result) {
 
 function failLoad(message) {
   console.error(message);
+  if (!firstFailure) firstFailure = message;
+  diag("FIRST LOAD FAILURE", message);
+  diag("State at failure", {
+    runtimeReady: runtimeReady,
+    helperReady: helperReady,
+    initStarted: initStarted,
+    createOfflineTtsWindow: typeof window.createOfflineTts,
+    createOfflineTtsGlobal: typeof createOfflineTts,
+    ModuleCalledRun: !!(Module && Module.calledRun),
+    modelPath: wasmDir
+  });
   setEngineState("Load failed", "error");
   setStatus("Voice failed to load", message, 0);
   speakButton.disabled = true;
@@ -152,6 +221,8 @@ var Module = {
 
   setStatus: function(text) {
     console.log("Sherpa:", text);
+    diag("Module.setStatus", text || "(empty)");
+    if (firstFailure) return;
 
     // Emscripten can clear its status before sherpa-onnx-tts.js has finished
     // loading. v0.7 tried to initialise at that moment, which created a race.
@@ -180,6 +251,7 @@ var Module = {
 
   onRuntimeInitialized: function() {
     console.log("Sherpa WASM runtime initialized");
+    diag("onRuntimeInitialized");
     runtimeReady = true;
     tryStartTts();
   },
@@ -236,6 +308,11 @@ function initTts() {
 
     var t0 = performance.now();
 
+    diag("Calling createOfflineTts", {
+      runtimeReady: runtimeReady,
+      helperReady: helperReady,
+      calledRun: !!Module.calledRun
+    });
     window._tts = createFn(Module, {
       offlineTtsModelConfig: {
         offlineTtsVitsModelConfig: {
@@ -261,6 +338,8 @@ function initTts() {
     var totalMs = performance.now() - loadStarted;
 
     loadTime.textContent = (totalMs / 1000).toFixed(2) + " s";
+
+    diag("createOfflineTts succeeded");
 
     console.log(
       "Sherpa ready:",
@@ -305,6 +384,9 @@ function loadScript(url) {
 
 async function prepareDirectSherpa() {
   loadStarted = performance.now();
+  diagnosticLines.length = 0;
+  diag("START v0.9");
+  diag("Model directory", wasmDir);
 
   try {
     setEngineState("Loading engine…", "loading");
@@ -316,7 +398,9 @@ async function prepareDirectSherpa() {
 
     // Same two scripts as the working demo. The important v0.8 change is
     // that we DO NOT try to create OfflineTts until both are independently ready.
+    diag("Loading main script", wasmDir + "sherpa-onnx-wasm-main-tts.js");
     await loadScript(wasmDir + "sherpa-onnx-wasm-main-tts.js");
+    diag("Main script loaded");
 
     setStatus(
       "Sherpa runtime loaded…",
@@ -324,9 +408,12 @@ async function prepareDirectSherpa() {
       82
     );
 
+    diag("Loading helper script", wasmDir + "sherpa-onnx-tts.js");
     await loadScript(wasmDir + "sherpa-onnx-tts.js");
+    diag("Helper script request completed");
     helperReady = true;
     console.log("Sherpa TTS helper loaded");
+    diag("TTS helper loaded", { createOfflineTts: typeof window.createOfflineTts });
 
     tryStartTts();
 
@@ -403,7 +490,7 @@ requestAnimationFrame(function() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async function() {
     try {
-      var reg = await navigator.serviceWorker.register("./sw.js?v=0.8", {
+      var reg = await navigator.serviceWorker.register("./sw.js?v=0.9", {
         updateViaCache: "none"
       });
       await reg.update();

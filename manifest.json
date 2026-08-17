@@ -1,8 +1,8 @@
 {
-  "name": "GameHub TTS Test 7",
-  "short_name": "TTS Test 7",
+  "name": "GameHub TTS Test 8",
+  "short_name": "TTS Test 8",
   "description": "Integrated Sherpa-ONNX/Piper text-to-speech test for GameHub.",
-  "start_url": "./index.html?v=0.8",
+  "start_url": "./index.html?v=0.9",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

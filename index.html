@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#e7dbd2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="TTS Test 7">
+  <meta name="apple-mobile-web-app-title" content="TTS Test 8">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>GameHub TTS Test 7</title>
+  <title>GameHub TTS Test 8</title>
   <link rel="manifest" href="./manifest.json?v=0.5">
   <link rel="apple-touch-icon" href="./icon-192.png?v=0.5">
   <link rel="icon" href="./icon-192.png?v=0.5">
@@ -18,7 +18,7 @@
   <main class="app-shell">
     <header class="page-header">
       <div>
-        <div class="eyebrow">GameHub experiment · v0.8</div>
+        <div class="eyebrow">GameHub experiment · v0.9</div>
         <h1>Direct Sherpa</h1>
       </div>
       <div class="header-status">
@@ -97,6 +97,16 @@
         </dl>
       </div>
     </section>
+
+    <section class="panel diagnostic-panel">
+      <div class="diagnostic-heading">
+        <h2>Diagnostic log</h2>
+        <button id="copyLogButton" class="small-button copy-log" type="button">Copy</button>
+      </div>
+      <p class="small-note">This log deliberately stays visible after a failure. A screenshot of it should tell us exactly where startup stops.</p>
+      <pre id="diagnosticLog">Waiting for startup…</pre>
+    </section>
+
   </main>
 
   <div class="orientation-guard">
