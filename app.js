@@ -1,22 +1,18 @@
-// GameHub TTS Test v0.9
-// Direct Sherpa-ONNX WASM integration.
-// No npm package and no third-party JS TTS wrapper.
+// GameHub TTS Test v0.10
 //
-// This mirrors the successful Sherpa demo architecture:
-//   Module.locateFile -> packed model directory
-//   sherpa-onnx-wasm-main-tts.js
-//   sherpa-onnx-tts.js
-//   createOfflineTts(...)
-//   tts.generate(...)
+// Key change from v0.9:
+// use the SAME matched Sherpa browser build for every runtime component.
+//
+// v0.9 mixed model-package glue with runtime exports and produced:
+// "call_indirect to a signature that does not match".
+//
+// v0.10 points sherpa-onnx-wasm-main-tts.js, sherpa-onnx-tts.js,
+// sherpa-onnx-wasm-main-tts.wasm and sherpa-onnx-wasm-main-tts.data
+// at the official k2-fsa WebAssembly TTS Space repository so all pieces
+// come from one build.
 
-var MODEL_KEY = "piper-en-libritts_r-medium";
-var PRECISION = "fp32";
-var CDN_BASE =
-  "https://huggingface.co/datasets/jiangzhuo9357/sherpa-onnx-tts-models/resolve/main/";
-
-// The public demo stores each packed Piper build by model + precision.
-var precisionSuffix = PRECISION === "fp32" ? "" : "-" + PRECISION;
-var wasmDir = CDN_BASE + "wasm-" + MODEL_KEY + precisionSuffix + "/";
+var SHERPA_BASE =
+  "https://huggingface.co/spaces/k2-fsa/web-assembly-tts-sherpa-onnx-en/resolve/main/";
 
 var sentences = [
   "Hello, how are you?",
@@ -44,12 +40,22 @@ var generationTime = document.querySelector("#generationTime");
 var audioLength = document.querySelector("#audioLength");
 var detailsToggle = document.querySelector("#detailsToggle");
 var details = document.querySelector("#details");
-
-
 var diagnosticLog = document.querySelector("#diagnosticLog");
 var copyLogButton = document.querySelector("#copyLogButton");
+
+var sentenceIndex = 0;
+var loadStarted = 0;
 var diagnosticLines = [];
 var firstFailure = null;
+var currentSource = null;
+var audioContext = null;
+var initStarted = false;
+
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+}
+installState.textContent = isStandalone() ? "Home Screen" : "Web page";
 
 function diag(label, value) {
   var elapsed = loadStarted ? ((performance.now() - loadStarted) / 1000).toFixed(2) : "0.00";
@@ -98,26 +104,6 @@ window.addEventListener("unhandledrejection", function(event) {
   diag("UNHANDLED PROMISE", event.reason instanceof Error ? event.reason : String(event.reason));
 });
 
-diag("Page", location.href);
-diag("User agent", navigator.userAgent);
-diag("Standalone", isStandalone());
-diag("WebAssembly", typeof WebAssembly);
-
-var sentenceIndex = 0;
-var loadStarted = 0;
-var currentSource = null;
-var audioContext = null;
-var initStarted = false;
-var runtimeReady = false;
-var helperReady = false;
-
-function isStandalone() {
-  return window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true;
-}
-
-installState.textContent = isStandalone() ? "Home Screen" : "Web page";
-
 function setStatus(title, detail, progress) {
   statusText.textContent = title;
   statusDetail.textContent = detail;
@@ -136,14 +122,12 @@ function renderSentence() {
   sentenceText.textContent = sentences[sentenceIndex];
   sentenceNumber.textContent = (sentenceIndex + 1) + " / " + sentences.length;
 }
-
 function moveSentence(delta) {
   sentenceIndex = (sentenceIndex + delta + sentences.length) % sentences.length;
   renderSentence();
 }
-
-previousSentence.addEventListener("click", function() { moveSentence(-1); });
-nextSentence.addEventListener("click", function() { moveSentence(1); });
+previousSentence.addEventListener("click", function(){ moveSentence(-1); });
+nextSentence.addEventListener("click", function(){ moveSentence(1); });
 
 speedInput.addEventListener("input", function() {
   speedReadout.textContent = Number(speedInput.value).toFixed(2) + "×";
@@ -156,6 +140,15 @@ detailsToggle.addEventListener("click", function() {
   detailsToggle.setAttribute("aria-expanded", String(show));
 });
 
+function failLoad(message) {
+  if (!firstFailure) firstFailure = message;
+  diag("FIRST LOAD FAILURE", message);
+  setEngineState("Load failed", "error");
+  setStatus("Could not prepare Sherpa", message, 0);
+  speakButton.disabled = true;
+  speakButton.textContent = "Voice failed to load";
+}
+
 function stopAudio() {
   if (currentSource) {
     try { currentSource.stop(); } catch (_) {}
@@ -165,155 +158,86 @@ function stopAudio() {
 
 function playAudio(result) {
   stopAudio();
-
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)({
       sampleRate: result.sampleRate
     });
   }
+  if (audioContext.state === "suspended") audioContext.resume();
 
-  if (audioContext.state === "suspended") {
-    audioContext.resume();
-  }
-
-  var buffer = audioContext.createBuffer(
-    1,
-    result.samples.length,
-    result.sampleRate
-  );
+  var buffer = audioContext.createBuffer(1, result.samples.length, result.sampleRate);
   buffer.getChannelData(0).set(result.samples);
-
   currentSource = audioContext.createBufferSource();
   currentSource.buffer = buffer;
   currentSource.connect(audioContext.destination);
   currentSource.start();
-
   currentSource.onended = function() {
     currentSource = null;
     setStatus("Ready", "Choose another sentence or play this one again.", 100);
   };
 }
 
-function failLoad(message) {
-  console.error(message);
-  if (!firstFailure) firstFailure = message;
-  diag("FIRST LOAD FAILURE", message);
-  diag("State at failure", {
-    runtimeReady: runtimeReady,
-    helperReady: helperReady,
-    initStarted: initStarted,
-    createOfflineTtsWindow: typeof window.createOfflineTts,
-    createOfflineTtsGlobal: typeof createOfflineTts,
-    ModuleCalledRun: !!(Module && Module.calledRun),
-    modelPath: wasmDir
-  });
-  setEngineState("Load failed", "error");
-  setStatus("Voice failed to load", message, 0);
-  speakButton.disabled = true;
-  speakButton.textContent = "Voice failed to load";
-}
-
-// Emscripten reads this global object when its generated script starts.
+// This is deliberately simple and mirrors the official demo pattern.
+// Emscripten asks locateFile() for both the .wasm and the packed .data file.
 var Module = {
   locateFile: function(path) {
-    return wasmDir + path;
+    var resolved = SHERPA_BASE + path;
+    diag("locateFile", path + " -> " + resolved);
+    return resolved;
   },
 
   setStatus: function(text) {
-    console.log("Sherpa:", text);
     diag("Module.setStatus", text || "(empty)");
-    if (firstFailure) return;
 
-    // Emscripten can clear its status before sherpa-onnx-tts.js has finished
-    // loading. v0.7 tried to initialise at that moment, which created a race.
     if (!text) {
-      runtimeReady = true;
-      tryStartTts();
+      initTts();
       return;
     }
 
-    var match = text.match(/Downloading data\.\.\. \((\d+)\/(\d+)\)/);
-    if (match) {
-      var loaded = parseInt(match[1], 10);
-      var total = parseInt(match[2], 10);
-      var pct = total ? Math.round((loaded / total) * 100) : 0;
-      setEngineState("Loading voice " + pct + "%", "loading");
+    var m = text.match(/Downloading data\.\.\. \((\d+)\/(\d+)\)/);
+    if (m) {
+      var loaded = parseInt(m[1], 10);
+      var total = parseInt(m[2], 10);
+      var pct = total ? (loaded / total * 100) : 0;
+      setEngineState("Loading voice " + pct.toFixed(0) + "%", "loading");
       setStatus(
-        "Loading voice in background…",
-        "You can choose a sentence while the model downloads.",
-        15 + pct * 0.7
+        "Loading matched Sherpa bundle…",
+        "The model is downloading in the background while you choose a sentence.",
+        10 + pct * 0.75
       );
     } else {
       setEngineState("Preparing voice…", "loading");
-      setStatus("Preparing Sherpa…", text, 12);
+      setStatus("Preparing Sherpa…", text, 8);
     }
-  },
-
-  onRuntimeInitialized: function() {
-    console.log("Sherpa WASM runtime initialized");
-    diag("onRuntimeInitialized");
-    runtimeReady = true;
-    tryStartTts();
   },
 
   onAbort: function(reason) {
-    failLoad("Sherpa stopped: " + reason + " | Model path: " + wasmDir);
+    failLoad("Sherpa stopped: " + reason);
   }
 };
-
 window.Module = Module;
 
-function tryStartTts() {
-  // We need BOTH pieces:
-  // 1. Emscripten/WASM runtime has finished starting.
-  // 2. sherpa-onnx-tts.js has defined createOfflineTts().
-  //
-  // In v0.7 condition 1 could happen first, causing a false load failure.
-  if (initStarted) return;
-  if (!runtimeReady) return;
-  if (!helperReady) return;
-  if (typeof window.createOfflineTts !== "function" &&
-      typeof createOfflineTts !== "function") {
-    return;
-  }
-
-  initTts();
-}
-
 function initTts() {
-  if (initStarted) return;
+  if (initStarted || window._tts) return;
   initStarted = true;
 
   try {
+    diag("Creating OfflineTts", {
+      createOfflineTts: typeof window.createOfflineTts,
+      calledRun: !!Module.calledRun
+    });
+
     setEngineState("Starting voice…", "loading");
     setStatus(
       "Starting voice…",
-      "Runtime and Sherpa helper are both ready. Creating the reusable TTS engine.",
-      90
+      "All runtime files are from the same official Sherpa browser build.",
+      92
     );
-
-    var createFn = window.createOfflineTts ||
-      (typeof createOfflineTts === "function" ? createOfflineTts : null);
-
-    if (!createFn) {
-      // This should no longer happen, but don't permanently poison the retry.
-      initStarted = false;
-      setStatus(
-        "Waiting for Sherpa helper…",
-        "The WASM runtime is ready; waiting for the TTS helper script.",
-        86
-      );
-      return;
-    }
 
     var t0 = performance.now();
 
-    diag("Calling createOfflineTts", {
-      runtimeReady: runtimeReady,
-      helperReady: helperReady,
-      calledRun: !!Module.calledRun
-    });
-    window._tts = createFn(Module, {
+    // Configuration follows sherpa-onnx's standard WASM Piper/VITS example.
+    window._tts = createOfflineTts(Module, {
       offlineTtsModelConfig: {
         offlineTtsVitsModelConfig: {
           model: "./model.onnx",
@@ -326,7 +250,7 @@ function initTts() {
           lengthScale: 1.0
         },
         numThreads: 1,
-        debug: 0,
+        debug: 1,
         provider: "cpu"
       },
       ruleFsts: "",
@@ -334,92 +258,69 @@ function initTts() {
       maxNumSentences: 1
     });
 
-    var initMs = performance.now() - t0;
+    var createMs = performance.now() - t0;
     var totalMs = performance.now() - loadStarted;
 
+    diag("OfflineTts ready", {
+      sampleRate: window._tts.sampleRate,
+      numSpeakers: window._tts.numSpeakers,
+      createMs: Math.round(createMs)
+    });
+
     loadTime.textContent = (totalMs / 1000).toFixed(2) + " s";
-
-    diag("createOfflineTts succeeded");
-
-    console.log(
-      "Sherpa ready:",
-      window._tts.sampleRate,
-      "Hz,",
-      window._tts.numSpeakers,
-      "speaker(s), init",
-      initMs.toFixed(0),
-      "ms"
-    );
-
     speakButton.disabled = false;
     speakButton.textContent = "Speak sentence";
     setEngineState("Voice ready", "ready");
     setStatus(
       "Ready",
-      "Direct Sherpa is loaded. Cycle through the sentences and compare generation times.",
+      "The official matched Sherpa build is loaded. Try the sentences below.",
       100
     );
   } catch (error) {
     initStarted = false;
-    failLoad(
-      (error && error.message ? error.message : String(error)) +
-      " | runtimeReady=" + runtimeReady +
-      " helperReady=" + helperReady
-    );
+    failLoad(error && error.message ? error.message : String(error));
   }
 }
 
 function loadScript(url) {
   return new Promise(function(resolve, reject) {
-    var script = document.createElement("script");
-    script.src = url;
-    script.async = false;
-    script.onload = resolve;
-    script.onerror = function() {
-      reject(new Error("Could not load Sherpa asset: " + url));
-    };
-    document.body.appendChild(script);
+    var s = document.createElement("script");
+    s.src = url;
+    s.async = false;
+    s.onload = function(){ diag("Loaded script", url); resolve(); };
+    s.onerror = function(){ reject(new Error("Could not load " + url)); };
+    document.body.appendChild(s);
   });
 }
 
-async function prepareDirectSherpa() {
+async function prepareSherpa() {
   loadStarted = performance.now();
   diagnosticLines.length = 0;
-  diag("START v0.9");
-  diag("Model directory", wasmDir);
+  diag("START v0.10");
+  diag("Matched build base", SHERPA_BASE);
 
   try {
     setEngineState("Loading engine…", "loading");
     setStatus(
       "Loading Sherpa in background…",
-      "The page is already usable while the WASM runtime and voice are prepared.",
-      8
+      "The page is usable while the official matched runtime starts.",
+      6
     );
 
-    // Same two scripts as the working demo. The important v0.8 change is
-    // that we DO NOT try to create OfflineTts until both are independently ready.
-    diag("Loading main script", wasmDir + "sherpa-onnx-wasm-main-tts.js");
-    await loadScript(wasmDir + "sherpa-onnx-wasm-main-tts.js");
-    diag("Main script loaded");
+    await loadScript(SHERPA_BASE + "sherpa-onnx-wasm-main-tts.js");
+    await loadScript(SHERPA_BASE + "sherpa-onnx-tts.js");
 
-    setStatus(
-      "Sherpa runtime loaded…",
-      "Loading the small TTS helper script next.",
-      82
-    );
-
-    diag("Loading helper script", wasmDir + "sherpa-onnx-tts.js");
-    await loadScript(wasmDir + "sherpa-onnx-tts.js");
-    diag("Helper script request completed");
-    helperReady = true;
-    console.log("Sherpa TTS helper loaded");
-    diag("TTS helper loaded", { createOfflineTts: typeof window.createOfflineTts });
-
-    tryStartTts();
-
-    // A delayed retry is harmless and protects against Safari delivering
-    // runtime callbacks in an unusual order.
-    setTimeout(tryStartTts, 250);
+    // The Emscripten setStatus('') callback normally initializes TTS.
+    // If it already happened before the helper script finished loading,
+    // retry now only if the engine is not already present.
+    setTimeout(function() {
+      if (!window._tts &&
+          typeof window.createOfflineTts === "function" &&
+          Module.calledRun) {
+        diag("Post-helper init retry");
+        initTts();
+      }
+    }, 100);
   } catch (error) {
     failLoad(error && error.message ? error.message : String(error));
   }
@@ -433,29 +334,28 @@ speakButton.addEventListener("click", function() {
   speakButton.textContent = "Generating…";
   generationTime.textContent = "—";
   audioLength.textContent = "—";
+  setStatus("Generating speech…", "Running locally on this device.", 76);
 
-  setStatus(
-    "Generating speech…",
-    "This part is running locally on the device.",
-    74
-  );
-
-  // Yield one frame before the synchronous WASM generation starts.
   setTimeout(function() {
     try {
       var t0 = performance.now();
-
       var result = window._tts.generate({
         text: sentences[sentenceIndex],
         sid: 0,
         speed: Number(speedInput.value)
       });
-
       var elapsed = performance.now() - t0;
       var duration = result.samples.length / result.sampleRate;
 
       generationTime.textContent = (elapsed / 1000).toFixed(2) + " s";
       audioLength.textContent = duration.toFixed(2) + " s";
+      diag("Generated", {
+        sentence: sentenceIndex + 1,
+        ms: Math.round(elapsed),
+        audioSeconds: Number(duration.toFixed(2)),
+        samples: result.samples.length,
+        sampleRate: result.sampleRate
+      });
 
       setStatus(
         "Playing",
@@ -463,15 +363,10 @@ speakButton.addEventListener("click", function() {
           (elapsed / 1000).toFixed(2) + " seconds.",
         100
       );
-
       playAudio(result);
     } catch (error) {
-      console.error(error);
-      setStatus(
-        "Generation failed",
-        error && error.message ? error.message : String(error),
-        0
-      );
+      diag("GENERATION FAILURE", error);
+      setStatus("Generation failed", error.message || String(error), 0);
     } finally {
       speakButton.disabled = false;
       speakButton.textContent = "Speak sentence";
@@ -481,21 +376,19 @@ speakButton.addEventListener("click", function() {
 
 renderSentence();
 
-// Let the GameHub UI paint first. Then begin the large download without the
-// user having to press a model-load button.
 requestAnimationFrame(function() {
-  setTimeout(prepareDirectSherpa, 200);
+  setTimeout(prepareSherpa, 200);
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async function() {
     try {
-      var reg = await navigator.serviceWorker.register("./sw.js?v=0.9", {
+      var reg = await navigator.serviceWorker.register("./sw.js?v=0.10", {
         updateViaCache: "none"
       });
       await reg.update();
     } catch (error) {
-      console.error("Service worker:", error);
+      console.error(error);
     }
   });
 }
